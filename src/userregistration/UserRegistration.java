@@ -26,7 +26,7 @@ public class UserRegistration extends JFrame {
     private JComboBox<String> roleComboBox;
     private JDateChooser dateChooser;
     private JSpinner timeSpinner;
-
+    private JButton switchToEventViewButton;
     private CardLayout cardLayout;
     private JPanel cardPanel;
 
@@ -178,9 +178,69 @@ public class UserRegistration extends JFrame {
                 createEvent(eventNameField.getText(), dateChooser.getDate(), ((SpinnerDateModel) timeSpinner.getModel()).getDate(), eventLocationField.getText(), eventCapacityField.getText());
             }
         });
+        
+        switchToEventViewButton = new JButton("View Events");
+    panel.add(switchToEventViewButton);
+    switchToEventViewButton.addActionListener(new ActionListener() {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            loadOrganizerEvents();
+        }
+    });
 
         return panel;
     }
+    
+    private void loadOrganizerEvents() {
+    // Query the database for events created by the currently authenticated organizer
+    try (Connection connection = createConnection()) {
+        // Replace the following query with the appropriate SQL query to retrieve organizer's events
+        String sql = "SELECT * FROM events WHERE organizer_id = ?";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, authenticatedUserId);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                // Create a DefaultTableModel with column names
+                DefaultTableModel model = new DefaultTableModel();
+                model.addColumn("Event Name");
+                model.addColumn("Date");
+                model.addColumn("Time");
+                model.addColumn("Location");
+                model.addColumn("Capacity");
+
+                // Populate the table model with organizer's events data
+                while (resultSet.next()) {
+                    String eventName = resultSet.getString("name");
+                    Date eventDate = resultSet.getDate("date");
+                    Time eventTime = resultSet.getTime("time");
+                    String eventLocation = resultSet.getString("location");
+                    int eventCapacity = resultSet.getInt("capacity");
+
+                    // Add a row to the table model
+                    model.addRow(new Object[]{eventName, eventDate, eventTime, eventLocation, eventCapacity});
+                }
+
+                // Create a JTable with the populated table model
+                JTable organizerEventsTable = new JTable(model);
+
+                // Create a JScrollPane to display the table
+                JScrollPane scrollPane = new JScrollPane(organizerEventsTable);
+
+                // Add the JScrollPane to a new panel or tab for organizer's events
+                JPanel organizerEventsPanel = new JPanel();
+                organizerEventsPanel.add(scrollPane);
+
+                // Add the new panel or tab to your cardPanel
+                cardPanel.add(organizerEventsPanel, "OrganizerEvents");
+
+                // Switch to the tab or panel for organizer's events
+                cardLayout.show(cardPanel, "OrganizerEvents");
+            }
+        }
+    } catch (SQLException ex) {
+        ex.printStackTrace();
+    }
+}
 
     private void registerUser() {
         String name = nameField.getText();
